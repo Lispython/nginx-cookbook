@@ -78,15 +78,20 @@ end
 configure_flags = node.run_state['nginx_configure_flags']
 nginx_force_recompile = node.run_state['nginx_force_recompile']
 
-bash "compile_nginx_source" do
-  cwd ::File.dirname(src_filepath)
-  code <<-EOH
+nginx_compile_command = begin
+                          <<-EOH
     tar zxf #{::File.basename(src_filepath)} -C #{::File.dirname(src_filepath)}
     cd nginx-#{node['nginx']['version']} && ./configure #{node.run_state['nginx_configure_flags'].join(" ")}
     make && make install
     rm -f #{node['nginx']['dir']}/nginx.conf
-  EOH
+EOH
+                        end
 
+Chef::Log.info("Nginx compile command: #{nginx_compile_command}")
+
+bash "compile_nginx_source" do
+  cwd ::File.dirname(src_filepath)
+  code nginx_compile_command
   not_if do
     nginx_force_recompile == false &&
       node.automatic_attrs['nginx'] &&
